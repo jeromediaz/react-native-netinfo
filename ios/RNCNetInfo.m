@@ -125,8 +125,10 @@ RCT_EXPORT_METHOD(getCurrentState:(nullable NSString *)requestedInterface resolv
     details[@"ipAddress"] = [self ipAddress] ?: NSNull.null;
     details[@"subnet"] = [self subnet] ?: NSNull.null;
     #if !TARGET_OS_TV && !TARGET_OS_OSX
-    details[@"ssid"] = [self ssid] ?: NSNull.null;
-    details[@"bssid"] = [self bssid] ?: NSNull.null;
+      if ([requestedInterface isEqualToString: RNCConnectionTypeWifi]) {
+          details[@"ssid"] = [self ssid] ?: NSNull.null;
+          details[@"bssid"] = [self bssid] ?: NSNull.null;
+      }
     #endif
   }
   return details;
@@ -157,17 +159,18 @@ RCT_EXPORT_METHOD(getCurrentState:(nullable NSString *)requestedInterface resolv
     while (temp_addr != NULL) {
       if (temp_addr->ifa_addr->sa_family == AF_INET) {
         NSString* ifname = [NSString stringWithUTF8String:temp_addr->ifa_name];
+          NSLog(@"ifname %@", ifname);
         if (
           // Check if interface is en0 which is the wifi connection on the iPhone
           // and the ethernet connection on the Apple TV
-          [ifname isEqualToString:@"en0"] ||
-          // Check if interface is en1 which is the wifi connection on the Apple TV
-          [ifname isEqualToString:@"en1"]
+          [ifname hasPrefix:@"en"]
         ) {
           // Get NSString from C String
           char str[INET_ADDRSTRLEN];
           inet_ntop(AF_INET, &((struct sockaddr_in *)temp_addr->ifa_addr)->sin_addr, str, INET_ADDRSTRLEN);
           address = [NSString stringWithUTF8String:str];
+            
+            NSLog(@"ifname %@ address %@", ifname, address);
         }
       }
 
@@ -194,11 +197,8 @@ RCT_EXPORT_METHOD(getCurrentState:(nullable NSString *)requestedInterface resolv
       if (temp_addr->ifa_addr->sa_family == AF_INET) {
         NSString* ifname = [NSString stringWithUTF8String:temp_addr->ifa_name];
         if (
-          // Check if interface is en0 which is the wifi connection on the iPhone
-          // and the ethernet connection on the Apple TV
-          [ifname isEqualToString:@"en0"] ||
-          // Check if interface is en1 which is the wifi connection on the Apple TV
-          [ifname isEqualToString:@"en1"]
+          // Check if interface starts with en, en0 is wifi, en3 is ethernet on iPhone
+            [ifname hasPrefix:@"en"]
         ) {
           // Get NSString from C String
           char str[INET_ADDRSTRLEN];
