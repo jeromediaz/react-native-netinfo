@@ -10,7 +10,7 @@
 #import <CoreTelephony/CTTelephonyNetworkInfo.h>
 #endif
 
-#if TARGET_OS_TV || TARGET_OS_OSX
+#if TARGET_OS_TV || TARGET_OS_OSX || TARGET_OS_IOS
 #include <ifaddrs.h>
 #endif
 
@@ -82,6 +82,29 @@
                         // Check if interface is en0 which is the ethernet connection on the Apple TV
                         NSString* ifname = [NSString stringWithUTF8String:temp_addr->ifa_name];
                         if ([ifname isEqualToString:@"en0"]) {
+                            _type = RNCConnectionTypeEthernet;
+                        }
+                    }
+                    temp_addr = temp_addr->ifa_next;
+                }
+            }
+            // Free memory
+            freeifaddrs(interfaces);
+#endif
+#if TARGET_OS_IOS
+            struct ifaddrs *interfaces = NULL;
+            struct ifaddrs *temp_addr = NULL;
+            int success = 0;
+            // retrieve the current interfaces - returns 0 on success
+            success = getifaddrs(&interfaces);
+            if (success == 0) {
+                // Loop through linked list of interfaces
+                temp_addr = interfaces;
+                while (temp_addr != NULL) {
+                    if (temp_addr->ifa_addr->sa_family == AF_INET) {
+                        // Check if interface starts with en but isn't en0 (wifi)
+                        NSString* ifname = [NSString stringWithUTF8String:temp_addr->ifa_name];
+                        if ([ifname hasPrefix:@"en"] && ![ifname isEqualToString:@"en0"]) {
                             _type = RNCConnectionTypeEthernet;
                         }
                     }
